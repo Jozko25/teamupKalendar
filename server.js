@@ -8,6 +8,14 @@ const BookingManager = require('./src/BookingManager');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Check for required environment variables
+if (!process.env.TEAMUP_API_KEY || !process.env.TEAMUP_CALENDAR_KEY) {
+  console.error('ERROR: Missing required environment variables!');
+  console.error('TEAMUP_API_KEY:', process.env.TEAMUP_API_KEY ? 'Set' : 'Missing');
+  console.error('TEAMUP_CALENDAR_KEY:', process.env.TEAMUP_CALENDAR_KEY ? 'Set' : 'Missing');
+  console.error('Please set TEAMUP_API_KEY and TEAMUP_CALENDAR_KEY in Railway environment variables');
+}
+
 const bookingManager = new BookingManager(
   process.env.TEAMUP_API_KEY,
   process.env.TEAMUP_CALENDAR_KEY
