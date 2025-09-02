@@ -294,7 +294,12 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'healthy', timestamp: new Date().toISOString() });
+});
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 TeamUp Booking API server running on port ${PORT}`);
   console.log(`📖 API documentation available at http://localhost:${PORT}`);
 });
