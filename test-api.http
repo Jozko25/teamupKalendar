@@ -1,0 +1,70 @@
+### Get API Info
+GET http://localhost:3000/
+
+### Get Subcalendars
+GET http://localhost:3000/api/subcalendars
+
+### Create a Booking
+POST http://localhost:3000/api/bookings
+Content-Type: application/json
+
+{
+  "title": "Client Consultation",
+  "subcalendarId": "your_subcalendar_id_here",
+  "startTime": "2024-12-20T10:00:00",
+  "duration": 60,
+  "customerInfo": {
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "phone": "+1-555-0123"
+  },
+  "notes": "Initial consultation meeting",
+  "location": "Meeting Room A"
+}
+
+### Get Specific Booking
+GET http://localhost:3000/api/bookings/booking_id_here
+
+### Update Booking
+PUT http://localhost:3000/api/bookings/booking_id_here
+Content-Type: application/json
+
+{
+  "title": "Updated Consultation",
+  "notes": "Updated meeting notes"
+}
+
+### Cancel Booking
+DELETE http://localhost:3000/api/bookings/booking_id_here
+Content-Type: application/json
+
+{
+  "reason": "Customer requested cancellation"
+}
+
+### Reschedule Booking
+POST http://localhost:3000/api/bookings/booking_id_here/reschedule
+Content-Type: application/json
+
+{
+  "newStartTime": "2024-12-20T14:00:00",
+  "newDuration": 90
+}
+
+### Get Bookings by Date
+GET http://localhost:3000/api/bookings?date=2024-12-20
+
+### Get Upcoming Bookings (next 7 days)
+GET http://localhost:3000/api/bookings?upcoming=7
+
+### Get Bookings by Customer
+GET http://localhost:3000/api/bookings?customer=john.doe@example.com
+
+### Check Availability
+GET http://localhost:3000/api/availability?subcalendarId=your_subcalendar_id&startTime=2024-12-20T15:00:00&duration=60
+
+### Get Available Time Slots
+GET http://localhost:3000/api/availability/slots?subcalendarId=your_subcalendar_id&date=2024-12-20&duration=60&workingHoursStart=9&workingHoursEnd=17
+
+### Generate Booking Report
+GET http://localhost:3000/api/reports/bookings?startDate=2024-12-01&endDate=2024-12-31&subcalendarId=your_subcalendar_id
