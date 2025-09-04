@@ -62,6 +62,24 @@ class BookingManager {
     }
   }
 
+  async getBookingById(bookingId) {
+    try {
+      const event = await this.client.getEvent(bookingId);
+      return {
+        id: event.id,
+        title: event.title,
+        start_dt: event.start_dt,
+        end_dt: event.end_dt,
+        location: event.location,
+        notes: event.notes,
+        custom: event.custom,
+        subcalendar_ids: event.subcalendar_ids
+      };
+    } catch (error) {
+      throw new Error(`Failed to get booking: ${error.message}`);
+    }
+  }
+
   async updateBooking(bookingId, updateData) {
     try {
       const existingEvent = await this.client.getEvent(bookingId);

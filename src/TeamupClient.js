@@ -32,6 +32,13 @@ class TeamupClient {
       };
       
       const queryParams = { ...defaultParams, ...params };
+      
+      // Convert subcalendarId to subcalendar_ids array if present
+      if (queryParams.subcalendarId) {
+        queryParams.subcalendar_ids = [queryParams.subcalendarId];
+        delete queryParams.subcalendarId;
+      }
+      
       const response = await this.axiosInstance.get(`/${this.calendarKey}/events`, { params: queryParams });
       return response.data.events;
     } catch (error) {
