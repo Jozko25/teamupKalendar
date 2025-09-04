@@ -1,5 +1,5 @@
 const TeamupClient = require('./TeamupClient');
-const { format, addMinutes, parseISO, isAfter, isBefore, differenceInMinutes } = require('date-fns');
+const { format, addMinutes, addDays, parseISO, isAfter, isBefore, differenceInMinutes } = require('date-fns');
 
 class BookingManager {
   constructor(apiKey, calendarKey) {

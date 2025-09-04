@@ -60,8 +60,8 @@ async function testLiveAPI() {
         console.log(`  📍 Time slot: ${new Date(availabilityResponse.data.startTime).toLocaleString()}\n`);
         
         // Test 4: Get Available Slots
-        console.log('🕐 Test 4: GET /api/available-slots');
-        const slotsResponse = await axios.get(`${API_BASE_URL}/api/available-slots`, {
+        console.log('🕐 Test 4: GET /api/availability/slots');
+        const slotsResponse = await axios.get(`${API_BASE_URL}/api/availability/slots`, {
             params: {
                 subcalendarId: subcalendarId,
                 date: tomorrow.toISOString().split('T')[0],
