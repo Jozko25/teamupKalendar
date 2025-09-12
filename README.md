@@ -1,227 +1,154 @@
-# TeamUp Calendar Booking Management System
+# Glamora Studio - TeamUp Booking System
 
-A comprehensive Node.js REST API for managing bookings and appointments using the TeamUp Calendar API. Includes ElevenLabs voice assistant integration for Slovak booking automation.
+AI-powered booking system for Glamora Studio with voice assistance integration and Slovak language support.
+
+## 🚀 Deployment on Railway
+
+[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/deploy?template=https://github.com/Jozko25/teamupKalendar)
 
 ## Features
 
-- **Complete booking lifecycle management**: Create, update, cancel, and reschedule bookings
-- **Availability checking**: Find available time slots and check conflicts
-- **Customer management**: Store and manage customer information with bookings
-- **Reporting**: Generate booking reports and analytics
-- **Flexible scheduling**: Support for different duration, working hours, and buffer times
-- **Search functionality**: Find bookings by customer, date, or other criteria
+- 🗓️ **TeamUp Calendar Integration** - Full calendar management
+- 🎙️ **ElevenLabs Voice Synthesis** - Natural Slovak voice responses
+- 🤖 **AI Receptionist** - Intelligent booking assistant
+- 📱 **WhatsApp Integration Ready** - Callback request handling
+- ⏰ **Smart Scheduling** - Staff availability management
+- 🇸🇰 **Slovak Language** - Native Slovak communication
 
-## Installation
+## Environment Variables for Railway
 
-1. Clone this repository:
-```bash
-git clone https://github.com/Jozko25/teamupKalendar.git
-cd teamupKalendar
-```
+Add these in Railway's Variables tab:
 
-2. Install dependencies:
-```bash
-npm install
-```
+```env
+# REQUIRED - TeamUp Configuration
+TEAMUP_API_KEY=your_teamup_api_key_here
+TEAMUP_CALENDAR_KEY=your_share_link_key_here  # Must be edit-enabled share link!
 
-3. Create `.env` file from example:
-```bash
-cp .env.example .env
-```
+# OPTIONAL - ElevenLabs for Voice
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_voice_id  # Use Slovak voice
+ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 
-4. Update `.env` with your TeamUp credentials:
-```
-TEAMUP_API_KEY=your_api_key_here
-TEAMUP_CALENDAR_KEY=your_calendar_key_here
+# Railway will set these automatically
 PORT=3000
+NODE_ENV=production
 ```
 
-## Quick Start
+## Setup Instructions
 
-```javascript
-const { createBookingManager } = require('./index');
+### 1. TeamUp Calendar Setup
 
-const bookingManager = createBookingManager();
+1. **Get API Key**
+   - Go to https://teamup.com/api-keys/request
+   - Fill form and get key instantly
 
-// Create a booking
-const booking = await bookingManager.createBooking({
-  title: 'Client Consultation',
-  subcalendarId: 'your_subcalendar_id',
-  startTime: '2024-01-15T10:00:00',
-  duration: 60,
-  customerInfo: {
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+1-555-0123'
-  },
-  notes: 'Initial consultation meeting',
-  location: 'Meeting Room A'
-});
-```
+2. **Create Share Link** (CRITICAL!)
+   - In your TeamUp calendar, go to Sharing
+   - Create new share link with **"Upraviť"** (Edit) permissions
+   - Copy the share key (e.g., `ks65ktirgttv3hdobb`)
+   - Use this as `TEAMUP_CALENDAR_KEY` NOT the calendar key!
 
-## API Reference
+3. **Create Subcalendars**
+   - Janka - Kaderníčka
+   - Nika - Kaderníčka
+   - Lívia - Kaderníčka
+   - Dominika - Kozmetička
 
-### BookingManager
+### 2. Railway Deployment
 
-#### Creating Bookings
+1. Fork this repo to your GitHub
+2. Go to [Railway](https://railway.app)
+3. New Project → Deploy from GitHub repo
+4. Select `teamupKalendar`
+5. Add environment variables
+6. Railway auto-deploys on push
 
-```javascript
-// Create a new booking
-const booking = await bookingManager.createBooking({
-  title: 'Meeting Title',
-  subcalendarId: 'subcalendar_id',
-  startTime: '2024-01-15T10:00:00',
-  duration: 60, // minutes
-  customerInfo: {
-    name: 'Customer Name',
-    email: 'customer@email.com',
-    phone: '+1-555-0123'
-  },
-  notes: 'Additional notes',
-  location: 'Location',
-  reminder: true // Send reminder notification
-});
-```
+### 3. Update Subcalendar IDs
 
-#### Managing Bookings
-
-```javascript
-// Update a booking
-await bookingManager.updateBooking(bookingId, {
-  title: 'Updated Title',
-  startTime: '2024-01-15T11:00:00',
-  customerInfo: { name: 'Updated Name' }
-});
-
-// Cancel a booking
-await bookingManager.cancelBooking(bookingId, 'Cancellation reason');
-
-// Reschedule a booking
-await bookingManager.rescheduleBooking(bookingId, '2024-01-16T10:00:00', 90);
-```
-
-#### Availability and Search
-
-```javascript
-// Check if a time slot is available
-const isAvailable = await bookingManager.checkAvailability(
-  subcalendarId, 
-  new Date('2024-01-15T10:00:00'), 
-  60 // duration in minutes
-);
-
-// Get available time slots for a day
-const availableSlots = await bookingManager.getAvailableTimeSlots(
-  subcalendarId,
-  new Date('2024-01-15'),
-  60, // slot duration
-  { start: 9, end: 17 } // working hours
-);
-
-// Get bookings by date
-const todaysBookings = await bookingManager.getBookingsByDate(new Date());
-
-// Get upcoming bookings
-const upcoming = await bookingManager.getUpcomingBookings(7); // next 7 days
-
-// Get bookings by customer
-const customerBookings = await bookingManager.getBookingsByCustomer('customer@email.com');
-```
-
-#### Reporting
-
-```javascript
-// Generate booking report
-const report = await bookingManager.generateBookingReport(
-  new Date('2024-01-01'), // start date
-  new Date('2024-01-31'), // end date
-  subcalendarId // optional
-);
-
-console.log(`Total bookings: ${report.totalBookings}`);
-console.log(`Total hours: ${report.totalHours}`);
-console.log(`Bookings by day:`, report.bookingsByDay);
-```
-
-### TeamupClient (Lower-level API)
-
-```javascript
-const { TeamupClient } = require('./index');
-
-const client = new TeamupClient(apiKey, calendarKey);
-
-// Get subcalendars
-const subcalendars = await client.getSubcalendars();
-
-// Get events
-const events = await client.getEvents({
-  startDate: '2024-01-01',
-  endDate: '2024-01-31'
-});
-
-// Create, update, delete events
-const event = await client.createEvent(eventData);
-await client.updateEvent(eventId, updateData);
-await client.deleteEvent(eventId);
-```
-
-## Configuration Options
-
-### Default Settings
-
-```javascript
-const bookingDefaults = {
-  reminderMinutes: 15,    // Default reminder time
-  defaultDuration: 60,    // Default booking duration in minutes
-  bufferMinutes: 15       // Buffer time between bookings
-};
-```
-
-### Working Hours
-
-```javascript
-const workingHours = {
-  start: 9,   // 9 AM
-  end: 17     // 5 PM
-};
-```
-
-## Examples
-
-Run the example file to see all features in action:
-
+After deployment, get your subcalendar IDs:
 ```bash
-node examples/example.js
+curl https://your-app.railway.app/api/subcalendars
 ```
 
-This will demonstrate:
-1. Getting subcalendars
-2. Finding available time slots
-3. Creating bookings
-4. Managing bookings (update, cancel, reschedule)
-5. Searching and reporting
-6. Availability checking
+Update in `config.js` if needed and push to GitHub.
 
-## Error Handling
+## API Endpoints
 
-All methods throw descriptive errors that you can catch:
+### Bookings
+- `POST /api/bookings` - Create booking
+- `GET /api/bookings?date=2025-09-16` - List bookings
+- `GET /api/bookings/:id` - Get specific booking
+- `PUT /api/bookings/:id` - Update booking
+- `DELETE /api/bookings/:id` - Cancel booking
 
-```javascript
-try {
-  const booking = await bookingManager.createBooking(bookingData);
-} catch (error) {
-  console.error('Booking creation failed:', error.message);
-}
+### Availability
+- `GET /api/availability/slots?date=2025-09-16&service=Strihanie` - Get slots
+
+### System
+- `GET /api/subcalendars` - List subcalendars
+- `GET /api/health` - Health check
+
+## Staff Schedule Configuration
+
+### Kaderníčky (Hairdressers)
+- **Janka**: Mon-Tue 12:00-18:00, Wed-Fri 9:00-15:00
+- **Nika**: Mon-Tue 9:00-15:00, Wed-Thu 12:00-18:00, Fri 9:00-15:00
+- **Lívia**: Mon 12:00-18:00, Tue 10:00-18:00, Wed-Fri 9:00-15:00
+
+### Kozmetička (Cosmetician)
+- **Dominika**: Mon-Tue 9:00-15:00, Wed-Thu 12:00-18:00, Fri 9:00-15:00
+
+## Services & Duration
+
+### Hair Services
+- Strihanie: 1h
+- Farbenie korienkov: 1.5h
+- Melír: 3-4h
+- Balayage: 3.5-4h
+- Airtouch: 5-6h
+- Svadobný účes: 2h
+
+### Cosmetic Services
+- Klasické ošetrenie: 1h 15min
+- Úprava obočia: 30min
+- Lash lift: 45min
+- Permanentný makeup: 3-4h
+
+## Testing the API
+
+Create a booking:
+```bash
+curl -X POST https://your-app.railway.app/api/bookings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Strihanie - Jana Nováková",
+    "subcalendarId": 14791751,
+    "startTime": "2025-09-20T10:00:00",
+    "endTime": "2025-09-20T11:00:00",
+    "who": "Jana Nováková",
+    "notes": "Strihanie a fúkanie"
+  }'
 ```
 
-## TeamUp Calendar Setup
+## Troubleshooting
 
-1. Create a TeamUp calendar account
-2. Get your API key from the TeamUp dashboard
-3. Note your calendar key (found in your calendar URL)
-4. Create subcalendars for different types of bookings if needed
-5. Set appropriate permissions for your API key
+### "Login required" error
+- You're using calendar key instead of share link key
+- Share link doesn't have edit permissions
+
+### Events not appearing
+- Check you're viewing the correct calendar
+- Ensure subcalendars are enabled/visible
+- Verify API response for booking ID
+
+### 403 Forbidden
+- API key doesn't match the share link
+- Share link is read-only
+
+## Support
+
+For issues: glamora@atomicmail.io
 
 ## License
 
-This project is open source and available under the MIT License.
+Private - Glamora Studio © 2025

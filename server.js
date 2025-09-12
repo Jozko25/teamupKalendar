@@ -4,26 +4,28 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const BookingManager = require('./src/BookingManager');
+const config = require('./config');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.app.port;
 
 // Debug environment variables
 console.log('Environment check:');
 console.log('NODE_ENV:', process.env.NODE_ENV);
 console.log('PORT:', process.env.PORT);
-console.log('TEAMUP_API_KEY:', process.env.TEAMUP_API_KEY ? 'Set' : 'Missing');
-console.log('TEAMUP_CALENDAR_KEY:', process.env.TEAMUP_CALENDAR_KEY ? 'Set' : 'Missing');
+console.log('TEAMUP_API_KEY:', config.teamup.apiKey ? 'Set' : 'Missing');
+console.log('TEAMUP_CALENDAR_KEY:', config.teamup.calendarKey ? 'Set' : 'Missing');
+console.log('ELEVENLABS_API_KEY:', config.elevenlabs.apiKey ? 'Set' : 'Missing');
 
 // Check for required environment variables
-if (!process.env.TEAMUP_API_KEY || !process.env.TEAMUP_CALENDAR_KEY) {
+if (!config.teamup.apiKey || !config.teamup.calendarKey) {
   console.error('ERROR: Missing required environment variables!');
-  console.error('Please set TEAMUP_API_KEY and TEAMUP_CALENDAR_KEY in Railway environment variables');
+  console.error('Please set TEAMUP_API_KEY and TEAMUP_CALENDAR_KEY in environment variables');
 }
 
 const bookingManager = new BookingManager(
-  process.env.TEAMUP_API_KEY,
-  process.env.TEAMUP_CALENDAR_KEY
+  config.teamup.apiKey,
+  config.teamup.calendarKey
 );
 
 // Trust proxy for Railway deployment
