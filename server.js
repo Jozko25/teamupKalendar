@@ -406,7 +406,7 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
     }
     
   } else if (action === 'booking') {
-    // Handle booking creation - same logic as existing booking endpoint
+    // Handle booking creation - using working logic from /api/webhook/booking
     try {
       if (!customerName || !service || !staffName || !date || !time) {
         return res.json({
@@ -415,18 +415,65 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
         });
       }
 
-      const result = await bookingManager.createBooking({
-        customerName,
-        service, 
-        staffName,
-        date,
-        time
-      });
+      // Map staff to subcalendar IDs
+      const staffMapping = {
+        'janka': 14791751,
+        'nika': 14791752
+      };
+
+      // Service durations in minutes
+      const serviceDurations = {
+        'strihanie': 60,
+        'farbenie': 90,
+        'melír': 180,
+        'balayage': 210
+      };
+
+      const subcalendarId = staffMapping[staffName?.toLowerCase()];
+      if (!subcalendarId) {
+        return res.json({
+          success: false,
+          message: `${staffName} nie je momentálne dostupná. Môžem vám ponúknuť termín s Jankou alebo Nikou.`
+        });
+      }
+
+      const duration = serviceDurations[service?.toLowerCase()] || 60;
+      
+      // Parse date and time - ensure correct format for TeamUp
+      const [year, month, day] = date.split('-');
+      const [hour, minute] = time.split(':');
+      
+      // Create proper datetime strings
+      const startDt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+      const endHour = parseInt(hour) + Math.floor(duration / 60);
+      const endMinute = parseInt(minute) + (duration % 60);
+      const adjustedEndHour = endHour + Math.floor(endMinute / 60);
+      const adjustedEndMinute = endMinute % 60;
+      const endDt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${adjustedEndHour.toString().padStart(2, '0')}:${adjustedEndMinute.toString().padStart(2, '0')}:00`;
+
+      // Create event directly in TeamUp
+      const teamupResponse = await axios.post(
+        `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+        {
+          subcalendar_id: subcalendarId,
+          start_dt: startDt,
+          end_dt: endDt,
+          title: `${customerName} - ${service}`,
+          who: customerName,
+          notes: `${service} - ${staffName}`
+        },
+        {
+          headers: {
+            'Teamup-Token': process.env.TEAMUP_API_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
       return res.json({
         success: true,
         message: `Výborne! Mám pre vás rezervovaný termín ${date} o ${time} na ${service} s ${staffName}. Pošlem vám SMS potvrdenie.`,
-        bookingId: result.bookingId
+        bookingId: teamupResponse.data.event.id
       });
 
     } catch (error) {
