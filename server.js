@@ -286,7 +286,16 @@ app.get('/api/reports/bookings', asyncHandler(async (req, res) => {
 
 // Unified webhook endpoint for ElevenLabs conversational AI
 app.post('/api/webhook', asyncHandler(async (req, res) => {
-  const { action, staffName, date, service, customerName, time } = req.body;
+  let { action, staffName, date, service, customerName, time } = req.body;
+  
+  // Handle "earliest appointment" requests by finding the first available slot
+  const isEarliestRequest = action === 'availability' && (!date || date === 'earliest' || date === 'najskorší');
+  if (isEarliestRequest) {
+    date = getNextWorkingDay();
+    
+    // For earliest requests, we'll try to find the first available slot across multiple days
+    // This will be handled below in the availability logic
+  }
   
   // Import axios at the top if not already done
   const axios = require('axios');
@@ -369,7 +378,70 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
         serviceDuration
       );
 
-      // If no slots available, suggest the next working day
+      // If no slots available and this was an "earliest" request, try next few days
+      if (availableSlots.length === 0 && isEarliestRequest) {
+        // Try next 7 working days to find earliest slot
+        for (let i = 1; i <= 7; i++) {
+          const nextDate = new Date(date);
+          nextDate.setDate(nextDate.getDate() + i);
+          
+          // Skip weekends
+          if (nextDate.getDay() === 0 || nextDate.getDay() === 6) continue;
+          
+          const nextDateStr = nextDate.toISOString().split('T')[0];
+          const nextDayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][nextDate.getDay()];
+          const nextWorkingHours = staff.schedule[nextDayOfWeek];
+          
+          if (!nextWorkingHours) continue;
+          
+          try {
+            const nextEventsResponse = await axios.get(
+              `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+              {
+                headers: { 'Teamup-Token': process.env.TEAMUP_API_KEY },
+                params: {
+                  startDate: nextDateStr,
+                  endDate: nextDateStr,
+                  'subcalendarId[]': staff.subcalendarId
+                }
+              }
+            );
+            
+            const nextExistingBookings = nextEventsResponse.data.events || [];
+            const nextAvailableSlots = generateAvailableSlots(
+              nextWorkingHours.start,
+              nextWorkingHours.end,
+              nextExistingBookings,
+              serviceDuration
+            );
+            
+            if (nextAvailableSlots.length > 0) {
+              // Found slots! Return this day
+              return res.json({
+                success: true,
+                staffName,
+                date: nextDateStr,
+                service,
+                workingHours: `${nextWorkingHours.start} - ${nextWorkingHours.end}`,
+                serviceDuration,
+                availableSlots: nextAvailableSlots,
+                earliestSlot: nextAvailableSlots[0],
+                message: `Najskorší voľný termín je ${nextDateStr} o ${nextAvailableSlots[0]}.`
+              });
+            }
+          } catch (error) {
+            console.error(`Error checking ${nextDateStr}:`, error.message);
+            continue;
+          }
+        }
+        
+        return res.json({
+          success: false,
+          message: `Bohužiaľ, ${staffName} nemá voľné termíny v najbližších dňoch. Skúste kontaktovať štúdio priamo.`
+        });
+      }
+      
+      // If no slots available for specific date request
       if (availableSlots.length === 0) {
         return res.json({
           success: true,
@@ -715,6 +787,27 @@ app.post('/api/webhook/availability', asyncHandler(async (req, res) => {
     });
   }
 }));
+
+// Helper function to find next working day
+function getNextWorkingDay(fromDate = new Date()) {
+  const date = new Date(fromDate);
+  
+  // Start from today if it's a working day and current time allows, otherwise tomorrow
+  const now = new Date();
+  const currentHour = now.getHours();
+  
+  // If it's today but after working hours, start from tomorrow
+  if (date.toDateString() === now.toDateString() && currentHour >= 18) {
+    date.setDate(date.getDate() + 1);
+  }
+  
+  // Skip weekends (Saturday = 6, Sunday = 0)
+  while (date.getDay() === 0 || date.getDay() === 6) {
+    date.setDate(date.getDate() + 1);
+  }
+  
+  return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+}
 
 function generateAvailableSlots(startTime, endTime, existingBookings, serviceDuration) {
   const slots = [];
