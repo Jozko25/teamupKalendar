@@ -284,6 +284,91 @@ app.get('/api/reports/bookings', asyncHandler(async (req, res) => {
   });
 }));
 
+// Webhook endpoint for ElevenLabs conversational AI
+app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
+  try {
+    const { 
+      customerName, 
+      service, 
+      staffName, 
+      date, 
+      time 
+    } = req.body;
+
+    // Map staff to subcalendar IDs
+    const staffMapping = {
+      'janka': 14791751,
+      'nika': 14791752
+    };
+
+    // Service durations in minutes
+    const serviceDurations = {
+      'strihanie': 60,
+      'farbenie': 90,
+      'melír': 180,
+      'balayage': 210,
+      'klasické ošetrenie': 75,
+      'úprava obočia': 30
+    };
+
+    const subcalendarId = staffMapping[staffName?.toLowerCase()];
+    if (!subcalendarId) {
+      return res.json({
+        success: false,
+        message: `${staffName} nie je momentálne dostupná. Môžem vám ponúknuť termín s Jankou alebo Nikou.`
+      });
+    }
+
+    const duration = serviceDurations[service?.toLowerCase()] || 60;
+    
+    // Parse date and time
+    const startDateTime = new Date(`${date}T${time}:00`);
+    const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+
+    // Create event directly in TeamUp
+    const axios = require('axios');
+    const teamupResponse = await axios.post(
+      `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+      {
+        subcalendar_id: subcalendarId,
+        start_dt: startDateTime.toISOString(),
+        end_dt: endDateTime.toISOString(),
+        title: `${customerName} - ${service}`,
+        who: customerName,
+        notes: `${service} - ${staffName}`
+      },
+      {
+        headers: {
+          'Teamup-Token': process.env.TEAMUP_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    return res.json({
+      success: true,
+      message: `Výborne! Mám pre vás rezervovaný termín ${date} o ${time} na ${service} s ${staffName}. Pošlem vám SMS potvrdenie.`,
+      bookingId: teamupResponse.data.event.id
+    });
+
+  } catch (error) {
+    console.error('Webhook booking error:', error.response?.data || error.message);
+    
+    // Check if it's a conflict error
+    if (error.response?.status === 409) {
+      return res.json({
+        success: false,
+        message: 'Tento termín je už obsadený. Môžem vám ponúknuť iný čas?'
+      });
+    }
+    
+    return res.json({
+      success: false,
+      message: 'Nepodarilo sa vytvoriť rezerváciu. Skúste prosím iný termín.'
+    });
+  }
+}));
+
 app.use((error, req, res, next) => {
   console.error('API Error:', error.message);
   res.status(500).json({

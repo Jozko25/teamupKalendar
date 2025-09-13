@@ -1,0 +1,33 @@
+{
+  "name": "create_booking",
+  "description": "Creates a booking in the calendar",
+  "url": "https://teamupkalendar-production.up.railway.app/api/voice-booking",
+  "method": "POST",
+  "parameters": {
+    "customerName": {
+      "type": "string",
+      "required": true,
+      "description": "Customer's full name"
+    },
+    "service": {
+      "type": "string",
+      "required": true,
+      "description": "Service name (strihanie, farbenie, melír, etc.)"
+    },
+    "staffName": {
+      "type": "string",
+      "required": true,
+      "description": "Staff member name (Janka or Nika)"
+    },
+    "date": {
+      "type": "string",
+      "required": true,
+      "description": "Date in YYYY-MM-DD format"
+    },
+    "time": {
+      "type": "string",
+      "required": true,
+      "description": "Time in HH:MM format (24-hour)"
+    }
+  }
+}

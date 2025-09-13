@@ -1,0 +1,49 @@
+{
+  "type": "webhook",
+  "name": "create_booking",
+  "description": "Creates a booking in the Glamora Studio calendar",
+  "url": "https://teamupkalendar-production.up.railway.app/api/webhook/booking",
+  "method": "POST",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "customerName": "{{customerName}}",
+    "service": "{{service}}",
+    "staffName": "{{staffName}}",
+    "date": "{{date}}",
+    "time": "{{time}}"
+  },
+  "parameters": [
+    {
+      "name": "customerName",
+      "type": "string",
+      "description": "Full name of the customer",
+      "required": true
+    },
+    {
+      "name": "service",
+      "type": "string", 
+      "description": "Service type: strihanie, farbenie, melír, balayage, klasické ošetrenie, úprava obočia",
+      "required": true
+    },
+    {
+      "name": "staffName",
+      "type": "string",
+      "description": "Staff member: Janka or Nika (Dominika and Lívia not available yet)",
+      "required": true
+    },
+    {
+      "name": "date",
+      "type": "string",
+      "description": "Date in YYYY-MM-DD format",
+      "required": true
+    },
+    {
+      "name": "time",
+      "type": "string",
+      "description": "Time in HH:MM format (24-hour)",
+      "required": true
+    }
+  ]
+}

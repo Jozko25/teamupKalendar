@@ -26,11 +26,11 @@
         },
         {
           "id": "subcalendarId",
-          "type": "string",
-          "value_type": "llm_prompt",
-          "description": "ID kalendára - VŽDY použiť '14750194' (jednotný kalendár)",
+          "type": "integer",
+          "value_type": "constant",
+          "description": "ID kalendára Dominika",
           "dynamic_variable": "",
-          "constant_value": "",
+          "constant_value": "14791752",
           "required": true
         },
         {
