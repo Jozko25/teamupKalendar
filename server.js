@@ -284,6 +284,154 @@ app.get('/api/reports/bookings', asyncHandler(async (req, res) => {
   });
 }));
 
+// Unified webhook endpoint for ElevenLabs conversational AI
+app.post('/api/webhook', asyncHandler(async (req, res) => {
+  const { action, staffName, date, service, customerName, time } = req.body;
+  
+  if (action === 'availability') {
+    // Handle availability check
+    try {
+      const staffSchedules = {
+        'janka': {
+          subcalendarId: 14791751,
+          schedule: {
+            monday: { start: '12:00', end: '18:00' },
+            tuesday: { start: '12:00', end: '18:00' },
+            wednesday: { start: '09:00', end: '15:00' },
+            thursday: { start: '09:00', end: '15:00' },
+            friday: { start: '09:00', end: '15:00' }
+          }
+        },
+        'nika': {
+          subcalendarId: 14791752,
+          schedule: {
+            monday: { start: '09:00', end: '15:00' },
+            tuesday: { start: '09:00', end: '15:00' },
+            wednesday: { start: '12:00', end: '18:00' },
+            thursday: { start: '12:00', end: '18:00' },
+            friday: { start: '09:00', end: '15:00' }
+          }
+        }
+      };
+
+      const serviceDurations = {
+        'strihanie': 60,
+        'farbenie': 90,
+        'melír': 180,
+        'balayage': 210
+      };
+
+      const staff = staffSchedules[staffName.toLowerCase()];
+      if (!staff) {
+        return res.json({
+          success: false,
+          message: 'Neplatné meno personálu. Dostupní sú: Janka, Nika'
+        });
+      }
+
+      const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][new Date(date).getDay()];
+      const workingHours = staff.schedule[dayOfWeek];
+
+      if (!workingHours) {
+        return res.json({
+          success: false,
+          message: `${staffName} nepracuje v tento deň.`
+        });
+      }
+
+      const startDate = date;
+      const endDate = date;
+
+      const existingEventsResponse = await axios.get(
+        `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+        {
+          headers: {
+            'Teamup-Token': process.env.TEAMUP_API_KEY
+          },
+          params: {
+            startDate: startDate,
+            endDate: endDate,
+            'subcalendarId[]': staff.subcalendarId
+          }
+        }
+      );
+
+      const existingBookings = existingEventsResponse.data.events || [];
+      const serviceDuration = serviceDurations[service?.toLowerCase()] || 60;
+
+      const availableSlots = generateAvailableSlots(
+        workingHours.start,
+        workingHours.end,
+        existingBookings,
+        serviceDuration
+      );
+
+      return res.json({
+        success: true,
+        staffName,
+        date,
+        service,
+        workingHours: `${workingHours.start} - ${workingHours.end}`,
+        serviceDuration,
+        availableSlots
+      });
+
+    } catch (error) {
+      console.error('Availability check error:', error.response?.data || error.message);
+      return res.json({
+        success: false,
+        message: 'Nepodarilo sa skontrolovať dostupnosť. Skúste prosím neskôr.'
+      });
+    }
+    
+  } else if (action === 'booking') {
+    // Handle booking creation - same logic as existing booking endpoint
+    try {
+      if (!customerName || !service || !staffName || !date || !time) {
+        return res.json({
+          success: false,
+          message: 'Pre rezerváciu potrebujem meno zákazníka, službu, personál, dátum a čas.'
+        });
+      }
+
+      const result = await bookingManager.createBooking({
+        customerName,
+        service, 
+        staffName,
+        date,
+        time
+      });
+
+      return res.json({
+        success: true,
+        message: `Výborne! Mám pre vás rezervovaný termín ${date} o ${time} na ${service} s ${staffName}. Pošlem vám SMS potvrdenie.`,
+        bookingId: result.bookingId
+      });
+
+    } catch (error) {
+      console.error('Webhook booking error:', error.response?.data || error.message);
+      
+      if (error.response?.status === 409) {
+        return res.json({
+          success: false,
+          message: 'Tento termín je už obsadený. Môžem vám ponúknuť iný čas?'
+        });
+      }
+      
+      return res.json({
+        success: false,
+        message: 'Nepodarilo sa vytvoriť rezerváciu. Skúste prosím iný termín.'
+      });
+    }
+    
+  } else {
+    return res.status(400).json({
+      success: false,
+      message: 'Neplatná akcia. Použite "availability" alebo "booking".'
+    });
+  }
+}));
+
 // Webhook endpoint for ElevenLabs conversational AI
 app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
   try {
