@@ -465,7 +465,7 @@ app.post('/api/webhook/availability', asyncHandler(async (req, res) => {
         params: {
           startDate: startDate,
           endDate: endDate,
-          subcalendarId: staff.subcalendarId
+          'subcalendarId[]': staff.subcalendarId
         }
       }
     );
