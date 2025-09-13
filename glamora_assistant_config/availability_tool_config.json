@@ -1,0 +1,62 @@
+{
+  "type": "webhook",
+  "name": "check-availability",
+  "description": "Kontrola dostupných termínov pre daný personál, dátum a službu",
+  "disable_interruptions": false,
+  "force_pre_tool_speech": "auto",
+  "assignments": [],
+  "api_schema": {
+    "url": "https://teamupkalendar-production.up.railway.app/api/webhook/availability",
+    "method": "POST",
+    "path_params_schema": [],
+    "query_params_schema": [],
+    "request_body_schema": {
+      "id": "body",
+      "type": "object",
+      "description": "Kontrola dostupnosti",
+      "properties": [
+        {
+          "id": "staffName",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Meno personálu: Janka alebo Nika",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "required": true
+        },
+        {
+          "id": "date",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Dátum vo formáte YYYY-MM-DD (VŽDY rok 2025!, napr. 2025-09-25)",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "required": true
+        },
+        {
+          "id": "service",
+          "type": "string",
+          "value_type": "llm_prompt",
+          "description": "Služba: strihanie, farbenie, melír, balayage",
+          "dynamic_variable": "",
+          "constant_value": "",
+          "required": true
+        }
+      ],
+      "required": false,
+      "value_type": "llm_prompt"
+    },
+    "request_headers": [
+      {
+        "type": "value",
+        "name": "Content-Type",
+        "value": "application/json"
+      }
+    ],
+    "auth_connection": null
+  },
+  "response_timeout_secs": 20,
+  "dynamic_variables": {
+    "dynamic_variable_placeholders": {}
+  }
+}

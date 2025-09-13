@@ -393,6 +393,150 @@ app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
   }
 }));
 
+// Webhook endpoint to check available slots
+app.post('/api/webhook/availability', asyncHandler(async (req, res) => {
+  try {
+    const { staffName, date, service } = req.body;
+
+    // Staff schedules and subcalendar mapping
+    const staffSchedules = {
+      'janka': {
+        subcalendarId: 14791751,
+        schedule: {
+          monday: { start: '12:00', end: '18:00' },
+          tuesday: { start: '12:00', end: '18:00' },
+          wednesday: { start: '09:00', end: '15:00' },
+          thursday: { start: '09:00', end: '15:00' },
+          friday: { start: '09:00', end: '15:00' }
+        }
+      },
+      'nika': {
+        subcalendarId: 14791752,
+        schedule: {
+          monday: { start: '09:00', end: '15:00' },
+          tuesday: { start: '09:00', end: '15:00' },
+          wednesday: { start: '12:00', end: '18:00' },
+          thursday: { start: '12:00', end: '18:00' },
+          friday: { start: '09:00', end: '15:00' }
+        }
+      }
+    };
+
+    const serviceDurations = {
+      'strihanie': 60,
+      'farbenie': 90,
+      'melír': 180,
+      'balayage': 210,
+      'klasické ošetrenie': 75,
+      'úprava obočia': 30
+    };
+
+    const staff = staffSchedules[staffName?.toLowerCase()];
+    if (!staff) {
+      return res.json({
+        success: false,
+        message: `${staffName} nie je dostupná. Dostupné sú: Janka, Nika`
+      });
+    }
+
+    // Get day of week
+    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const workingHours = staff.schedule[dayOfWeek];
+    
+    if (!workingHours) {
+      return res.json({
+        success: false,
+        message: `${staffName} v tento deň nepracuje.`,
+        availableSlots: []
+      });
+    }
+
+    // Get existing bookings for this staff member on this date
+    const axios = require('axios');
+    const startDate = `${date}T00:00:00`;
+    const endDate = `${date}T23:59:59`;
+    
+    const existingEventsResponse = await axios.get(
+      `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+      {
+        headers: {
+          'Teamup-Token': process.env.TEAMUP_API_KEY
+        },
+        params: {
+          startDate: startDate,
+          endDate: endDate,
+          subcalendarId: staff.subcalendarId
+        }
+      }
+    );
+
+    const existingBookings = existingEventsResponse.data.events || [];
+    const serviceDuration = serviceDurations[service?.toLowerCase()] || 60;
+
+    // Generate available slots
+    const availableSlots = generateAvailableSlots(
+      workingHours.start,
+      workingHours.end,
+      existingBookings,
+      serviceDuration
+    );
+
+    return res.json({
+      success: true,
+      staffName,
+      date,
+      service,
+      workingHours: `${workingHours.start} - ${workingHours.end}`,
+      serviceDuration: serviceDuration,
+      availableSlots: availableSlots.slice(0, 8) // Return max 8 slots
+    });
+
+  } catch (error) {
+    console.error('Availability check error:', error.response?.data || error.message);
+    return res.json({
+      success: false,
+      message: 'Nepodarilo sa skontrolovať dostupnosť. Skúste prosím neskôr.'
+    });
+  }
+}));
+
+function generateAvailableSlots(startTime, endTime, existingBookings, serviceDuration) {
+  const slots = [];
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  const startMinutes = startHour * 60 + startMinute;
+  const endMinutes = endHour * 60 + endMinute;
+  
+  // Convert existing bookings to time ranges
+  const bookedRanges = existingBookings.map(booking => {
+    const start = new Date(booking.start_dt);
+    const end = new Date(booking.end_dt);
+    return {
+      start: start.getHours() * 60 + start.getMinutes(),
+      end: end.getHours() * 60 + end.getMinutes()
+    };
+  });
+
+  // Generate slots every 30 minutes
+  for (let time = startMinutes; time + serviceDuration <= endMinutes; time += 30) {
+    const slotEnd = time + serviceDuration;
+    
+    // Check if this slot conflicts with any existing booking
+    const hasConflict = bookedRanges.some(booking => 
+      (time < booking.end && slotEnd > booking.start)
+    );
+    
+    if (!hasConflict) {
+      const hours = Math.floor(time / 60);
+      const minutes = time % 60;
+      slots.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    }
+  }
+  
+  return slots;
+}
+
 app.use((error, req, res, next) => {
   console.error('API Error:', error.message);
   res.status(500).json({
