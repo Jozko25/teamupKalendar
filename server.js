@@ -295,6 +295,21 @@ app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
       time 
     } = req.body;
 
+    // Validate required fields
+    if (!customerName || customerName.trim() === '') {
+      return res.json({
+        success: false,
+        message: 'Potrebujem najprv vedieť vaše meno a priezvisko.'
+      });
+    }
+
+    if (!service || !staffName || !date || !time) {
+      return res.json({
+        success: false,
+        message: 'Chýbajú potrebné údaje pre rezerváciu. Potrebujem meno, službu, personál, dátum a čas.'
+      });
+    }
+
     // Map staff to subcalendar IDs
     const staffMapping = {
       'janka': 14791751,
