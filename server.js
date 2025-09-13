@@ -511,6 +511,90 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
 
       const duration = serviceDurations[service?.toLowerCase()] || 60;
       
+      // DUPLICATE BOOKING PREVENTION - Check if slot is already taken
+      try {
+        const existingEventsResponse = await axios.get(
+          `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
+          {
+            headers: { 'Teamup-Token': process.env.TEAMUP_API_KEY },
+            params: {
+              startDate: date,
+              endDate: date,
+              'subcalendarId[]': subcalendarId
+            }
+          }
+        );
+
+        const existingBookings = existingEventsResponse.data.events || [];
+        
+        // Check if requested time conflicts with existing bookings
+        const requestedStartTime = parseInt(time.replace(':', ''));
+        const requestedEndTime = requestedStartTime + Math.floor(duration/60)*100 + (duration%60);
+        
+        const hasConflict = existingBookings.some(booking => {
+          const existingStart = new Date(booking.start_dt);
+          const existingEnd = new Date(booking.end_dt);
+          const existingStartTime = existingStart.getHours() * 100 + existingStart.getMinutes();
+          const existingEndTime = existingEnd.getHours() * 100 + existingEnd.getMinutes();
+          
+          // Check if times overlap
+          return (requestedStartTime < existingEndTime && requestedEndTime > existingStartTime);
+        });
+
+        if (hasConflict) {
+          // Find next available slot for this day
+          const staffSchedules = {
+            'janka': {
+              monday: { start: '12:00', end: '18:00' },
+              tuesday: { start: '12:00', end: '18:00' },
+              wednesday: { start: '09:00', end: '15:00' },
+              thursday: { start: '09:00', end: '15:00' },
+              friday: { start: '09:00', end: '15:00' }
+            },
+            'nika': {
+              monday: { start: '09:00', end: '15:00' },
+              tuesday: { start: '09:00', end: '15:00' },
+              wednesday: { start: '12:00', end: '18:00' },
+              thursday: { start: '12:00', end: '18:00' },
+              friday: { start: '09:00', end: '15:00' }
+            }
+          };
+
+          const requestedDate = new Date(date);
+          const dayOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][requestedDate.getDay()];
+          const workingHours = staffSchedules[staffName?.toLowerCase()]?.[dayOfWeek];
+          
+          if (workingHours) {
+            const availableSlots = generateAvailableSlots(
+              workingHours.start,
+              workingHours.end,
+              existingBookings,
+              duration
+            );
+            
+            if (availableSlots.length > 0) {
+              return res.json({
+                success: false,
+                message: `Bohužiaľ, termín ${date} o ${time} je už obsadený. Najbližší voľný termín je o ${availableSlots[0]}. Chceli by ste si rezervovať tento termín namiesto toho?`,
+                conflictDetected: true,
+                suggestedSlots: availableSlots.slice(0, 3), // Show first 3 available slots
+                earliestSlot: availableSlots[0]
+              });
+            } else {
+              return res.json({
+                success: false,
+                message: `Bohužiaľ, termín ${date} o ${time} je už obsadený a na tento deň už nie sú ďalšie voľné termíny. Môžem vám ponúknuť iný dátum.`,
+                conflictDetected: true,
+                suggestedSlots: []
+              });
+            }
+          }
+        }
+      } catch (conflictCheckError) {
+        console.error('Error checking for conflicts:', conflictCheckError.message);
+        // Continue with booking attempt if conflict check fails
+      }
+      
       // Parse date and time - ensure correct format for TeamUp
       const [year, month, day] = date.split('-');
       const [hour, minute] = time.split(':');
@@ -798,6 +882,11 @@ function getNextWorkingDay(fromDate = new Date()) {
   
   // If it's today but after working hours, start from tomorrow
   if (date.toDateString() === now.toDateString() && currentHour >= 18) {
+    date.setDate(date.getDate() + 1);
+  }
+  
+  // If today is weekend, start from tomorrow
+  if (date.toDateString() === now.toDateString() && (date.getDay() === 0 || date.getDay() === 6)) {
     date.setDate(date.getDate() + 1);
   }
   
