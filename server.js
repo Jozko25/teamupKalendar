@@ -288,6 +288,9 @@ app.get('/api/reports/bookings', asyncHandler(async (req, res) => {
 app.post('/api/webhook', asyncHandler(async (req, res) => {
   const { action, staffName, date, service, customerName, time } = req.body;
   
+  // Import axios at the top if not already done
+  const axios = require('axios');
+  
   if (action === 'availability') {
     // Handle availability check
     try {
@@ -321,7 +324,7 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
         'balayage': 210
       };
 
-      const staff = staffSchedules[staffName.toLowerCase()];
+      const staff = staffSchedules[staffName?.toLowerCase()];
       if (!staff) {
         return res.json({
           success: false,
@@ -366,6 +369,22 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
         serviceDuration
       );
 
+      // If no slots available, suggest the next working day
+      if (availableSlots.length === 0) {
+        return res.json({
+          success: true,
+          staffName,
+          date,
+          service,
+          workingHours: `${workingHours.start} - ${workingHours.end}`,
+          serviceDuration,
+          availableSlots: [],
+          message: `Bohužiaľ, ${staffName} nemá voľné termíny na ${date}. Skúste iný deň.`,
+          nextAvailableDay: 'Skúste nasledujúci pracovný deň.'
+        });
+      }
+
+      // Return available slots with the earliest one highlighted
       return res.json({
         success: true,
         staffName,
@@ -373,7 +392,9 @@ app.post('/api/webhook', asyncHandler(async (req, res) => {
         service,
         workingHours: `${workingHours.start} - ${workingHours.end}`,
         serviceDuration,
-        availableSlots
+        availableSlots,
+        earliestSlot: availableSlots[0],
+        message: `Najskorší voľný termín je o ${availableSlots[0]}.`
       });
 
     } catch (error) {
