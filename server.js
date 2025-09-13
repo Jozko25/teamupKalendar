@@ -321,9 +321,18 @@ app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
 
     const duration = serviceDurations[service?.toLowerCase()] || 60;
     
-    // Parse date and time
-    const startDateTime = new Date(`${date}T${time}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + duration * 60000);
+    // Parse date and time - ensure correct format for TeamUp
+    // TeamUp expects format like "2025-09-19T12:00:00+02:00"
+    const [year, month, day] = date.split('-');
+    const [hour, minute] = time.split(':');
+    
+    // Create proper datetime strings with timezone
+    const startDt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+    const endHour = parseInt(hour) + Math.floor(duration / 60);
+    const endMinute = parseInt(minute) + (duration % 60);
+    const adjustedEndHour = endHour + Math.floor(endMinute / 60);
+    const adjustedEndMinute = endMinute % 60;
+    const endDt = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${adjustedEndHour.toString().padStart(2, '0')}:${adjustedEndMinute.toString().padStart(2, '0')}:00`;
 
     // Create event directly in TeamUp
     const axios = require('axios');
@@ -331,8 +340,8 @@ app.post('/api/webhook/booking', asyncHandler(async (req, res) => {
       `https://api.teamup.com/${process.env.TEAMUP_CALENDAR_KEY}/events`,
       {
         subcalendar_id: subcalendarId,
-        start_dt: startDateTime.toISOString(),
-        end_dt: endDateTime.toISOString(),
+        start_dt: startDt,
+        end_dt: endDt,
         title: `${customerName} - ${service}`,
         who: customerName,
         notes: `${service} - ${staffName}`
