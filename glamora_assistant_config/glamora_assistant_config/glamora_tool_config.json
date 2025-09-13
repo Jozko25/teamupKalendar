@@ -28,7 +28,7 @@
           "id": "service",
           "type": "string",
           "value_type": "llm_prompt",
-          "description": "Služba: strihanie, farbenie, melír, balayage, klasické ošetrenie, úprava obočia",
+          "description": "Služba: strihanie, farbenie, melír, balayage",
           "dynamic_variable": "",
           "constant_value": "",
           "required": true
@@ -37,7 +37,7 @@
           "id": "staffName",
           "type": "string",
           "value_type": "llm_prompt",
-          "description": "Meno personálu: Janka alebo Nika (Dominika a Lívia zatiaľ nedostupné)",
+          "description": "Meno personálu: Janka alebo Nika",
           "dynamic_variable": "",
           "constant_value": "",
           "required": true
@@ -46,7 +46,7 @@
           "id": "date",
           "type": "string",
           "value_type": "llm_prompt",
-          "description": "Dátum vo formáte YYYY-MM-DD (napr. 2025-09-19)",
+          "description": "Dátum vo formáte YYYY-MM-DD (VŽDY rok 2025!, napr. 2025-09-25)",
           "dynamic_variable": "",
           "constant_value": "",
           "required": true
